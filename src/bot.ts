@@ -4,7 +4,7 @@ import packageInfo from '../package.json';
 import { DB } from './db';
 import { i18n } from './stuff/i18n';
 import { ENV } from './stuff/environment-variables';
-import { changeRSVPForUser, createEvent } from './usecases';
+import { changeRSVPForUser, createEvent, listEvents } from './usecases';
 import { pretty } from './stuff/pretty';
 
 const db = new DB();
@@ -25,5 +25,13 @@ bot.on('callback_query', (query: CallbackQuery) => {
     changeRSVPForUser(query.message, query.id, query.from, query.data, i18n, db, bot);
   } catch (error) {
     console.error(`Error while creating event. Error: ${error}. Command: ${pretty(query)}`);
+  }
+});
+
+bot.onText(/^\/(L|l)ist.*/, async (message: Message) => {
+  try {
+    await listEvents(message, i18n, db, bot);
+  } catch (error) {
+    console.error(`Error while creating event. Error: ${error}. Command: ${pretty(message)}`);
   }
 });

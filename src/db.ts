@@ -17,6 +17,10 @@ export class DB {
     return await all<Event>(this.db, 'SELECT * FROM events');
   }
 
+  public async getEventsOnChat(chat_id: number): Promise<Event[]> {
+    return await all<Event>(this.db, 'SELECT * FROM events WHERE chat_id=?', [chat_id]);
+  }
+
   public async getEvent(chat_id: number, message_id: number): Promise<Event> {
     return await get<Event>(this.db, 'SELECT * FROM events WHERE chat_id=? AND message_id=?', [chat_id, message_id]);
   }

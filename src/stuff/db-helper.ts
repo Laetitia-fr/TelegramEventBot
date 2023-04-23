@@ -10,7 +10,7 @@ export function all<Result>(db: Database, query: string, params?: Param[]): Prom
         reject('Error: ' + err.message);
       }
       else {
-        resolve(rows);
+        resolve(<Result[]>rows);
       }
     });
   });
@@ -26,7 +26,7 @@ export function get<Result>(db: Database, query: string, params?: Param[]): Prom
         reject('Error: ' + err.message);
       }
       else {
-        resolve(rows);
+        resolve(<Result>rows);
       }
     });
   });

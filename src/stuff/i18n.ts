@@ -1,13 +1,19 @@
 export const i18n = {
   message_content: {
-    created_by: 'Erstellt von',
-    rsvps: 'Zusagen',
+    prefix: '📆 Événement',
+    created_by: 'Créé par',
+    rsvps: 'Accepté(s)',
   },
   buttons: {
-    rsvp: '👍    zusagen',
-    cancel_rsvp: '🚫  doch nicht',
+    rsvp:        '👍    Accepter',
+    cancel_rsvp: '🚫    Refuser',
   },
   errors: {
-    generic: 'Ein Fehler ist aufgetreten.',
+    generic: 'Une erreur est survenue.',
+  },
+  message_list_content: {
+    header: 'Liste des évéments',
+    prefix: '📆 ',
+    separator: '➖➖➖',
   },
 };

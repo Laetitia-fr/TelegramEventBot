@@ -2,19 +2,23 @@
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 import TelegramBot, { EditMessageTextOptions, Message, SendMessageOptions, User } from 'node-telegram-bot-api';
 import { InlineKeyboard, InlineKeyboardButton, Row } from 'node-telegram-keyboard-wrapper';
-import { createEventDescription, getEventTextWithAttendees, getFullNameString } from './core';
+import { createEventDescription, createSerialEvent, getEventTextWithAttendees, getFullNameString, createEventsList } from './core';
 import { DB } from './db';
 import { Action } from './models';
 
 export async function createEvent(message: Message, i18n: any, db: DB, bot: TelegramBot) {
   const event_description = createEventDescription(message, i18n);
+  const serial_event = createSerialEvent(message, i18n);
   deleteMessage(bot, message);
   const options: SendMessageOptions = {
     parse_mode: 'HTML',
     reply_markup: rsvpButtons(i18n.buttons.rsvp, i18n.buttons.cancel_rsvp).getMarkup(),
   };
+  if (message.chat.is_forum) {
+    options.message_thread_id=message.message_thread_id;
+  }
   const created_message = await bot.sendMessage(message.chat.id, event_description, options);
-  await db.insertEvent(created_message.chat.id, created_message.message_id, event_description);
+  await db.insertEvent(created_message.chat.id, created_message.message_id, serial_event);
 }
 
 function rsvpButtons(rsvp_label: string, cancel_label: string) {
@@ -27,7 +31,7 @@ function rsvpButtons(rsvp_label: string, cancel_label: string) {
 }
 
 function deleteMessage(bot: TelegramBot, message: Message): void {
-  bot.deleteMessage(message.chat.id, message.message_id.toString());
+  bot.deleteMessage(message.chat.id, message.message_id);
 }
 
 export async function changeRSVPForUser(
@@ -68,7 +72,7 @@ export async function changeRSVPForUser(
 
   bot.answerCallbackQuery(query_id, { text: '' }).then(async () => {
     const attendees = await db.getAttendeesForEvent(chat_id, message_id);
-    const eventTextWithAttendees = getEventTextWithAttendees(event.description, attendees, i18n.message_content.rsvps);
+    const eventTextWithAttendees = getEventTextWithAttendees(event.description, attendees, i18n);
     const options: EditMessageTextOptions = {
       chat_id: message.chat.id,
       message_id: message.message_id,
@@ -79,3 +83,17 @@ export async function changeRSVPForUser(
   });
 }
 
+export async function listEvents(message: Message, i18n: any, db: DB, bot: TelegramBot) {
+  const events = await db.getEventsOnChat(message.chat.id);
+  deleteMessage(bot, message);
+  if (events.length > 0){
+    const events_list = createEventsList(events, i18n);
+    const options: SendMessageOptions = {
+      parse_mode: 'HTML',
+    };
+    if (message.chat.is_forum) {
+      options.message_thread_id=message.message_thread_id;
+    }
+    const created_message = await bot.sendMessage(message.chat.id, events_list, options);
+  }
+}
