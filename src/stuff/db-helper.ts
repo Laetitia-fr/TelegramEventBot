@@ -1,52 +1,51 @@
-import { Database } from 'sqlite3';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
-export function all<Result>(db: Database, query: string, params?: Param[]): Promise<Result[]> {
+export function all<Result>(connection: any, query: string, params?: Param[]): Promise<Result[]> {
   return new Promise((resolve, reject) => {
     if (params == undefined) {
       params = [];
     }
-    db.all(query, params, function (err, rows) {
-      if (err) {
-        reject('Error: ' + err.message);
-      }
-      else {
-        resolve(<Result[]>rows);
-      }
+    connection.connect(function(err: any) {
+      if (err) reject('Error: ' + err.message);
+      connection.query(query, params, function (err: any, result: any) {
+        if (err) reject('Error: ' + err.message);
+        resolve(<Result[]>result);
+      });
     });
+
   });
 }
 
-export function get<Result>(db: Database, query: string, params?: Param[]): Promise<Result> {
+export function get<Result>(connection: any, query: string, params?: Param[]): Promise<Result> {
   return new Promise((resolve, reject) => {
     if (params == undefined) {
       params = [];
     }
-    db.get(query, params, function (err, rows) {
-      if (err) {
-        reject('Error: ' + err.message);
-      }
-      else {
-        resolve(<Result>rows);
-      }
+    
+    connection.connect(function(err: any) {
+      if (err) reject('Error: ' + err.message);
+      connection.execute(query, params, function (err: any, result: any) {
+        if (err) reject('Error: ' + err.message);
+        resolve(<Result>result[0]);
+      });
     });
   });
 }
 
-export function run(db: Database, query: string, params?: Param[]): Promise<unknown[]> {
+export function run(connection: any, query: string, params?: Param[]): Promise<unknown[]> {
   return new Promise((resolve, reject) => {
     if (params == undefined) {
       params = [];
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    db.run(query, params, function (err: any, rows: any) {
-      if (err) {
-        reject('Error: ' + err.message);
-      }
-      else {
-        resolve(rows);
-      }
+
+    connection.connect(function(err: any) {
+      if (err) reject('Error: ' + err.message);
+      connection.execute(query, params, function (err: any, result: any) {
+        if (err) reject('Error: ' + err.message);
+        resolve(result);
+      });
     });
   });
 }
 
-export type Param = string | number;
+export type Param = string | number | Date | null;

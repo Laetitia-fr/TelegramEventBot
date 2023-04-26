@@ -48,6 +48,36 @@ sqlite3 ./data/development.db
 
 Now the bot is started in watch-mode, i.e. whenever you make changes to the code and save them, the bot automatically updates. You can now open Telegram (on the computer or phone) and use the bot (like in "How to create an event"). 
 
+### Use MySQL database
+```
+CREATE DATABASE telegramEventBot;
+
+USE telegramEventBot;
+
+CREATE TABLE events(
+    `id` INT NOT NULL UNIQUE AUTO_INCREMENT,
+    `chat_id` INT NOT NULL,
+    `message_id` INT NOT NULL,
+    `when` DATE NULL,
+    `description` TEXT NOT NULL,
+    PRIMARY KEY(`id`)
+);
+CREATE TABLE attendees(
+    id INTEGER NOT NULL UNIQUE AUTO_INCREMENT,
+    event_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    FOREIGN KEY(event_id) REFERENCES events(id),
+    PRIMARY KEY(id)
+);
+
+CREATE USER 'telegramEventBot'@'localhost' IDENTIFIED BY '<password>';
+
+GRANT ALL PRIVILEGES ON telegramEventBot.* TO 'telegramEventBot'@'localhost';
+
+```
+
+
 ### Create your own bot with your changes
 
 Follow the steps under "Local development"

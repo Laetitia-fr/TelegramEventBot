@@ -2,12 +2,13 @@
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 import TelegramBot, { EditMessageTextOptions, Message, SendMessageOptions, User } from 'node-telegram-bot-api';
 import { InlineKeyboard, InlineKeyboardButton, Row } from 'node-telegram-keyboard-wrapper';
-import { createEventDescription, createSerialEvent, getEventTextWithAttendees, getFullNameString, createEventsList } from './core';
+import { createEventDescription, getDateEvent, createSerialEvent, getEventTextWithAttendees, getFullNameString, createEventsList } from './core';
 import { DB } from './db';
 import { Action } from './models';
 
 export async function createEvent(message: Message, i18n: any, db: DB, bot: TelegramBot) {
   const event_description = createEventDescription(message, i18n);
+  const event_date = getDateEvent(message);
   const serial_event = createSerialEvent(message, i18n);
   deleteMessage(bot, message);
   const options: SendMessageOptions = {
@@ -18,7 +19,7 @@ export async function createEvent(message: Message, i18n: any, db: DB, bot: Tele
     options.message_thread_id=message.message_thread_id;
   }
   const created_message = await bot.sendMessage(message.chat.id, event_description, options);
-  await db.insertEvent(created_message.chat.id, created_message.message_id, serial_event);
+  await db.insertEvent(created_message.chat.id, created_message.message_id, event_date, serial_event);
 }
 
 function rsvpButtons(rsvp_label: string, cancel_label: string) {
@@ -60,9 +61,14 @@ export async function changeRSVPForUser(
   }
   const chat_id = message.chat.id;
   const { message_id } = message;
+  //console.log(`Chat: ${chat_id}, Message: ${message_id}`);
   const event = await db.getEvent(chat_id, message_id);
+  //console.log(`Event: ${event.id}`);
   if (event === undefined) {
-    throw new Error(`Event could not be found in the database: chat_id=${chat_id}, message_id=${message_id}`);
+    bot.answerCallbackQuery(query_id, { text: '' }).then(async () => {
+    });
+    return;
+    //throw new Error(`Event could not be found in the database: chat_id=${chat_id}, message_id=${message_id}`);
   }
   if (!cancellingRSVP) {
     await db.rsvpToEvent(event.id, user.id, getFullNameString(user));
@@ -94,6 +100,6 @@ export async function listEvents(message: Message, i18n: any, db: DB, bot: Teleg
     if (message.chat.is_forum) {
       options.message_thread_id=message.message_thread_id;
     }
-    const created_message = await bot.sendMessage(message.chat.id, events_list, options);
+    await bot.sendMessage(message.chat.id, events_list, options);
   }
 }

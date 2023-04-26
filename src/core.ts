@@ -42,6 +42,35 @@ function removeBotCommand(text: string): string {
   return text.replace(/^\/(E|e)vent( |\n)?/, '');
 }
 
+export function getDateEvent(message: Message): Date|null|undefined {
+  if (message.text === undefined || message.from === undefined) {
+    throw new Error(`Tried to create an event with an empty message-text. Message: ${message}`);
+  }
+  const event_description = removeBotCommand(message.text);
+  const dates = event_description.matchAll(/(?<day>[0-9]{1,2})\/(?<month>[0-9]{1,2})\/(?<year>[0-9]{4})/g);
+  //console.log(dates);
+  let yearI, monthI, dayI : number;
+  let result: Date|null = null;
+  for(const currentDate of dates) {
+    if (currentDate.groups === undefined) {
+      throw new Error(`Tried to extrtact date on message. Message: ${event_description}`);
+    }
+    const {year, month, day} = currentDate.groups;
+    //console.log(`${year}-${month}-${day}`);
+    yearI = parseInt(year);
+    monthI = parseInt(month)-1;
+    dayI = parseInt(day);
+    if (yearI>=2023 && monthI>=0 && monthI<12 && dayI>0 && dayI<=31){
+      result = new Date();
+      result.setFullYear(yearI, monthI, dayI);
+      if (! (result instanceof Date && isFinite(result.getTime())) ){
+        result = null;
+      }
+    }
+  }
+  return result;
+}
+
 function addEventAuthor(text: string, author: User, i18n: any): string {
   return `${text}\n\n<i>${i18n.message_content.created_by} ${getFullNameString(author)}</i>`;
 }
@@ -84,7 +113,12 @@ function listHeader(i18n: any): string {
 function addList(text: string, events: Event[], i18n: any): string {
   return `${text}\n\n${events.reduce(
     (eventsString, eventsRow) =>
-      `${eventsString}${i18n.message_list_content.prefix}${eventsRow.description}\n${i18n.message_list_content.separator}\n`,
+      `${eventsString}${i18n.message_list_content.prefix}${displayDate(eventsRow.when)}${eventsRow.description}\n${i18n.message_list_content.separator}\n`,
     '',
   )}`;
+
+  function displayDate(when: Date|undefined|null): string{
+    if (when === undefined || when == null) return '<i>(Pas de date)</i>\n';
+    return `${when.getDate()}/${when.getMonth()+1}/${when.getFullYear()}\n`;
+  }
 }

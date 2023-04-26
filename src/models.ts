@@ -9,6 +9,7 @@ export interface Event {
   id: number;
   chat_id: number;
   message_id: number;
+  when: Date|null;
   description: string;
 }
 
