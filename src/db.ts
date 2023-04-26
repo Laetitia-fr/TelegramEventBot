@@ -24,7 +24,7 @@ export class DB {
   }
 
   public async getEventsOnChat(chat_id: number): Promise<Event[]> {
-    return await all<Event>(this.connection, 'SELECT id, chat_id, message_id, `when`, description FROM events WHERE chat_id=? order by case when `when` is null then 9999/12/31 else `when` end asc', [chat_id]);
+    return await all<Event>(this.connection, 'SELECT id, chat_id, message_id, `when`, description FROM events WHERE chat_id=? and (`when` is null or `when`>now()) order by case when `when` is null then 9999/12/31 else `when` end asc', [chat_id]);
   }
 
   public async getEvent(chat_id: number, message_id: number): Promise<Event> {

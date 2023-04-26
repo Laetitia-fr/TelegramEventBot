@@ -66,6 +66,7 @@ export async function changeRSVPForUser(
   //console.log(`Event: ${event.id}`);
   if (event === undefined) {
     bot.answerCallbackQuery(query_id, { text: '' }).then(async () => {
+      console.log(`Event not found - Chat: ${chat_id}, Message: ${message_id} - ignore it`);
     });
     return;
     //throw new Error(`Event could not be found in the database: chat_id=${chat_id}, message_id=${message_id}`);
