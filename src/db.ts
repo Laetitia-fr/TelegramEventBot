@@ -53,6 +53,19 @@ export class DB {
     return this.getEventById(event_id);
   }
 
+  public async updateDescriptionOfEvent(event_id: number, description: string): Promise<Event> {
+    if (description.length > DESCRIPTION_MAX_LENGTH) {
+      throw new Error(`Description too long. Maximum length: ${DESCRIPTION_MAX_LENGTH} characters.`);
+    }
+    await run(this.connection, 'UPDATE events SET description=? where id=?', [description, event_id]);
+    return this.getEventById(event_id);
+  }
+
+  public async deleteEvent(event_id: number): Promise<void> {
+    await run(this.connection, 'DELETE FROM attendees where event_id=?', [event_id]);
+    await run(this.connection, 'DELETE FROM events where id=?', [event_id]);
+  }
+
   public async rsvpToEvent(event_id: number, user_id: number, name: string): Promise<void> {
     //console.log(`${event_id}, ${user_id}, ${name}`)
     await run(this.connection, 'INSERT INTO attendees (event_id, user_id, name) VALUES (?, ?, ?)', [event_id, user_id, name]);

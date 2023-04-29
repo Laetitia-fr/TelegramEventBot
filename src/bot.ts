@@ -4,7 +4,7 @@ import packageInfo from '../package.json';
 import { DB } from './db';
 import { i18n } from './stuff/i18n';
 import { ENV } from './stuff/environment-variables';
-import { changeRSVPForUser, createEvent, listEvents, msgError, listAllEvents, dateEvent } from './usecases';
+import { changeRSVPForUser, createEvent, changeEvent, listEvents, msgError, listAllEvents, dateEvent, deleteEvent, cmdEvent, help, helpAdmin } from './usecases';
 import { pretty } from './stuff/pretty';
 
 const db = new DB();
@@ -14,6 +14,7 @@ console.log(`Bot server started. Version ${packageInfo.version}. Production mode
 
 bot.onText(/^\/(E|e)vent.*/, async (message: Message) => {
   try {
+    console.log(`Command: ${pretty(message)}`);
     if (message.from?.is_bot){
       console.error(`Bot message. Command: ${pretty(message)}`);
       return;
@@ -21,6 +22,19 @@ bot.onText(/^\/(E|e)vent.*/, async (message: Message) => {
     await createEvent(message, i18n, db, bot);
   } catch (error) {
     console.error(`Error while creating event. Error: ${error}. Command: ${pretty(message)}`);
+  }
+});
+
+bot.onText(/^\/(U|u)pdate.*/, async (message: Message) => {
+  try {
+    console.log(`Command: ${pretty(message)}`);
+    if (message.from?.is_bot){
+      console.error(`Bot message. Command: ${pretty(message)}`);
+      return;
+    }
+    await changeEvent(message, i18n, db, bot);
+  } catch (error) {
+    console.error(`Error while updating event. Error: ${error}. Command: ${pretty(message)}`);
   }
 });
 
@@ -44,7 +58,7 @@ bot.onText(/^\/(L|l)ist( .*|$)/, async (message: Message) => {
   }
 });
 
-bot.onText(/^\/(L|l)istAll( .*|$)/, async (message: Message) => {
+bot.onText(/^\/(L|l)istall( .*|$)/, async (message: Message) => {
   try {
     if (message.from?.is_bot){
       console.error(`Bot message. Command: ${pretty(message)}`);
@@ -76,7 +90,55 @@ bot.onText(/^\/(D|d)ate .*/, async (message: Message) => {
   }
 });
 
+bot.onText(/^\/(D|d)elete .*/, async (message: Message) => {
+  try {
+    if (message.from?.is_bot){
+      console.error(`Bot message. Command: ${pretty(message)}`);
+      return;
+    }
+    if (fromAdmins(message)) {
+      await deleteEvent(message, i18n, db, bot);
+    } else {
+      await msgError(message, i18n.errors.not_alow, i18n, db, bot);
+    }
+  } catch (error) {
+    console.error(`Error while removing event. Error: ${error}. Command: ${pretty(message)}`);
+  }
+});
+
+bot.onText(/^\/(C|c)md .*/, async (message: Message) => {
+  try {
+    if (message.from?.is_bot){
+      console.error(`Bot message. Command: ${pretty(message)}`);
+      return;
+    }
+    if (fromAdmins(message)) {
+      await cmdEvent(message, i18n, db, bot);
+    } else {
+      await msgError(message, i18n.errors.not_alow, i18n, db, bot);
+    }
+  } catch (error) {
+    console.error(`Error while creating event command. Error: ${error}. Command: ${pretty(message)}`);
+  }
+});
+
 function fromAdmins(message: Message): boolean {
   const telegram_admins = new RegExp(`^(${ENV.TELEGRAM_ADMIN})$`);
-  return ! (message.from === undefined || ! telegram_admins.test(`${message.from?.username}`) );
+  return ! (message.from === undefined || ! telegram_admins.test(`${message.chat.username}`) );
 }
+
+bot.onText(/^\/(H|h)elp( .*|$)/, async (message: Message) => {
+  try {
+    if (message.from?.is_bot){
+      console.error(`Bot message. Command: ${pretty(message)}`);
+      return;
+    }
+    if (fromAdmins(message)) {
+      await helpAdmin(message, i18n, db, bot);
+    } else {
+      await help(message, i18n, db, bot);
+    }
+  } catch (error) {
+    console.error(`Error while displaying help command. Error: ${error}. Command: ${pretty(message)}`);
+  }
+});

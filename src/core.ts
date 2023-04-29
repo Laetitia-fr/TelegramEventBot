@@ -3,6 +3,8 @@
 import { Message, User } from 'node-telegram-bot-api';
 import { Attendee } from './models';
 import { Event } from './models';
+/* eslint-disable */
+const HTMLDecoderEncoder = require("html-encoder-decoder");
 
 export function createEventDescription(message: Message, i18n: any): string {
   if (message.text === undefined || message.from === undefined) {
@@ -13,11 +15,11 @@ export function createEventDescription(message: Message, i18n: any): string {
   return event_description_valid_length;
 }
 
-export function createSerialEvent(message: Message): string {
+export function createSerialEvent(message: Message, removeId: boolean): string {
   if (message.text === undefined || message.from === undefined) {
     throw new Error(`Tried to create an event with an empty message-text. Message: ${message}`);
   }
-  const event_description = removeBotCommand(message.text);
+  const event_description = removeId ? removeBotCommandWithID(message.text) : removeBotCommand(message.text);
   const event_description_valid_length = shortenDescriptionIfTooLong(event_description, 3500, true);
   return event_description_valid_length;
 }
@@ -37,7 +39,11 @@ function shortenDescriptionIfTooLong(description: string, size: number, pretty: 
 }
 
 function removeBotCommand(text: string): string {
-  return text.replace(/^\/((E|e)vent|(D|d)ate)( |\n)?/, '');
+  return text.replace(/^\/((E|e)vent|(D|d)ate|(C|c)md|(D|d)elete|(U|u)pdate)( |\n)?/, '');
+}
+
+function removeBotCommandWithID(text: string): string {
+  return text.replace(/^\/((D|d)ate|(C|c)md|(D|d)elete|(U|u)pdate) [0-9]*( |\n)?/, '');
 }
 
 export function getDateEvent(message: Message): Date|null|undefined {
@@ -131,6 +137,22 @@ export function createEventsListForAdmin(events: Event[], i18n: any): string {
 
 export function displayEventForAdmin(event: Event, i18n: any): string {
   return `${i18n.message_list_content.prefix} id=${event.id}\n(chat_id=${event.chat_id}), date=${displayDate(event.when)}, auteur=${event.author_name}(@${event.author_id})\n${event.description}` ;
+}
+
+export function cmdCreateEvent(event: Event): string {
+  return `/event ${HTMLDecoderEncoder.encode(event.description)}` ;
+}
+
+export function cmdUpdateEvent(event: Event): string {
+  return `/update ${event.id} ${HTMLDecoderEncoder.encode(event.description)}` ;
+}
+
+export function displayHelp(i18n: any): string {
+  return `${i18n.help.header}\n\n${i18n.help.event}\n\n${i18n.help.list}\n\n${i18n.help.help}`;
+}
+
+export function displayHelpAdmin(i18n: any): string {
+  return `${displayHelp(i18n)}\n\n${i18n.help.listall}\n\n${i18n.help.date}\n\n${i18n.help.delete}\n\n${i18n.help.cmd}\n\n${i18n.help.update}`;
 }
 
 function listHeader(i18n: any): string {
