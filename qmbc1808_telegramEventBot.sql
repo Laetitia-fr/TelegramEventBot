@@ -46,7 +46,9 @@ CREATE TABLE `events` (
   `chat_id` int(11) NOT NULL,
   `message_id` int(11) NOT NULL,
   `when` DATE NULL,
-  `description` mediumtext NOT NULL
+  `description` mediumtext NOT NULL,
+  `author_name` TEXT NOT NULL,
+  `author_id` TEXT NOT NULL,
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --

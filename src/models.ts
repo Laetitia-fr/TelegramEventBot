@@ -11,6 +11,8 @@ export interface Event {
   message_id: number;
   when: Date|null;
   description: string;
+  author_name: string;
+  author_id: string;
 }
 
 export enum Action {

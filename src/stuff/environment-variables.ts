@@ -1,5 +1,6 @@
 const { DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, DATABASE_PWD
-  , PORT, HOST, NODE_ENV, DEV_BOT_TOKEN, PROD_BOT_TOKEN } = process.env;
+  , PORT, HOST, NODE_ENV, DEV_BOT_TOKEN, PROD_BOT_TOKEN
+  , TELEGRAM_ADMIN } = process.env;
 if (DATABASE_HOST === undefined) {
   throw new Error('Environment variable "DATABASE_HOST" is not set."');
 }
@@ -27,6 +28,11 @@ if (DEV_BOT_TOKEN === undefined) {
 if (PROD_BOT_TOKEN === undefined) {
   throw new Error('Environment variable "PROD_BOT_TOKEN" is not set.');
 }
+if (TELEGRAM_ADMIN === undefined) {
+  throw new Error('Environment variable "TELEGRAM_ADMIN" is not set.');
+}
 const PRODUCTION_MODE = Boolean(NODE_ENV === 'production');
 const BOT_TOKEN = PRODUCTION_MODE ? PROD_BOT_TOKEN : DEV_BOT_TOKEN;
-export const ENV = { DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, DATABASE_PWD, PORT, HOST, BOT_TOKEN, PRODUCTION_MODE };
+export const ENV = { DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, DATABASE_PWD
+  , PORT, HOST, BOT_TOKEN, PRODUCTION_MODE
+  , TELEGRAM_ADMIN };

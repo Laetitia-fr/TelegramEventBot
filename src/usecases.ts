@@ -2,14 +2,18 @@
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 import TelegramBot, { EditMessageTextOptions, Message, SendMessageOptions, User } from 'node-telegram-bot-api';
 import { InlineKeyboard, InlineKeyboardButton, Row } from 'node-telegram-keyboard-wrapper';
-import { createEventDescription, getDateEvent, createSerialEvent, getEventTextWithAttendees, getFullNameString, createEventsList } from './core';
+import { createEventDescription, addEventAuthor, getDateEvent, createSerialEvent, getEventTextWithAttendees, getFullNameString, getAuthorId, createEventsList, createEventsListForAdmin, getEventId, displayEventForAdmin } from './core';
 import { DB } from './db';
 import { Action } from './models';
 
 export async function createEvent(message: Message, i18n: any, db: DB, bot: TelegramBot) {
   const event_description = createEventDescription(message, i18n);
+  if (message.text === undefined || message.from === undefined) {
+    throw new Error(`Tried to create an event with an empty message-text. Message: ${message}`);
+  }
+  const event_description_with_author = addEventAuthor(event_description, message.from, i18n);
   const event_date = getDateEvent(message);
-  const serial_event = createSerialEvent(message, i18n);
+  const serial_event = createSerialEvent(message);
   deleteMessage(bot, message);
   const options: SendMessageOptions = {
     parse_mode: 'HTML',
@@ -18,8 +22,10 @@ export async function createEvent(message: Message, i18n: any, db: DB, bot: Tele
   if (message.chat.is_forum) {
     options.message_thread_id=message.message_thread_id;
   }
-  const created_message = await bot.sendMessage(message.chat.id, event_description, options);
-  await db.insertEvent(created_message.chat.id, created_message.message_id, event_date, serial_event);
+  const created_message = await bot.sendMessage(message.chat.id, event_description_with_author, options);
+  const author_name = getFullNameString(message.from);
+  const author_id = getAuthorId(message.from);
+  await db.insertEvent(created_message.chat.id, created_message.message_id, event_date, serial_event, author_name, author_id);
 }
 
 function rsvpButtons(rsvp_label: string, cancel_label: string) {
@@ -79,7 +85,7 @@ export async function changeRSVPForUser(
 
   bot.answerCallbackQuery(query_id, { text: '' }).then(async () => {
     const attendees = await db.getAttendeesForEvent(chat_id, message_id);
-    const eventTextWithAttendees = getEventTextWithAttendees(event.description, attendees, i18n);
+    const eventTextWithAttendees = getEventTextWithAttendees(event.description, event.author_name, attendees, i18n);
     const options: EditMessageTextOptions = {
       chat_id: message.chat.id,
       message_id: message.message_id,
@@ -103,4 +109,50 @@ export async function listEvents(message: Message, i18n: any, db: DB, bot: Teleg
     }
     await bot.sendMessage(message.chat.id, events_list, options);
   }
+}
+
+export async function listAllEvents(message: Message, i18n: any, db: DB, bot: TelegramBot) {
+  const events = await db.getAllEvents();
+  //deleteMessage(bot, message);
+  if (events.length > 0){
+    const events_list = createEventsListForAdmin(events, i18n);
+    const options: SendMessageOptions = {
+      parse_mode: 'HTML',
+    };
+    if (message.chat.is_forum) {
+      options.message_thread_id=message.message_thread_id;
+    }
+    await bot.sendMessage(message.chat.id, events_list, options);
+  }
+}
+
+export async function msgError(message: Message, response: string, i18n: any, db: DB, bot: TelegramBot) {
+  //deleteMessage(bot, message);
+  const options: SendMessageOptions = {
+    parse_mode: 'HTML',
+  };
+  await bot.sendMessage(message.chat.id, response, options);
+}
+
+export async function dateEvent(message: Message, i18n: any, db: DB, bot: TelegramBot) {
+  const event_id = getEventId(message);
+  if (event_id == 0) {
+    await msgError(message, i18n.errors.id_not_found, i18n, db, bot);
+    return;
+  }
+  const event_date = getDateEvent(message);
+  if (event_date === undefined || event_date == null) {
+    await msgError(message, i18n.errors.date_not_found, i18n, db, bot);
+    return;
+  }
+  const event = await db.updateDateOfEvent(event_id, event_date);
+  if (event === undefined || event == null) {
+    await msgError(message, i18n.errors.id_not_found, i18n, db, bot);
+    return;
+  }
+  const event_detail = displayEventForAdmin(event, i18n);
+  const options: SendMessageOptions = {
+    parse_mode: 'HTML',
+  };
+  await bot.sendMessage(message.chat.id, event_detail, options);
 }

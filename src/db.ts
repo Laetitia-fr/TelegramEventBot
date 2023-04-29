@@ -20,29 +20,38 @@ export class DB {
   }
 
   public async getAllEvents(): Promise<Event[]> {
-    return await all<Event>(this.connection, 'SELECT id, chat_id, message_id, description FROM events');
+    return await all<Event>(this.connection, 'SELECT id, chat_id, message_id, `when`, description, author_name, author_id FROM events order by id asc');
   }
 
   public async getEventsOnChat(chat_id: number): Promise<Event[]> {
-    return await all<Event>(this.connection, 'SELECT id, chat_id, message_id, `when`, description FROM events WHERE chat_id=? and (`when` is null or `when`>now()) order by case when `when` is null then 9999/12/31 else `when` end asc', [chat_id]);
+    return await all<Event>(this.connection, 'SELECT id, chat_id, message_id, `when`, description, author_name, author_id FROM events WHERE chat_id=? and (`when` is null or `when`>now()) order by case when `when` is null then 9999/12/31 else `when` end asc', [chat_id]);
   }
 
   public async getEvent(chat_id: number, message_id: number): Promise<Event> {
-    return await get<Event>(this.connection, 'SELECT id, chat_id, message_id, description FROM events WHERE chat_id=? AND message_id=?', [chat_id, message_id]);
+    return await get<Event>(this.connection, 'SELECT id, chat_id, message_id, `when`, description, author_name, author_id FROM events WHERE chat_id=? AND message_id=?', [chat_id, message_id]);
   }
 
-  public async insertEvent(chat_id: number, message_id: number, when: Date|null|undefined, description: string): Promise<void> {
+  public async getEventById(id: number): Promise<Event> {
+    return await get<Event>(this.connection, 'SELECT id, chat_id, message_id, `when`, description, author_name, author_id FROM events WHERE id=?', [id]);
+  }
+
+  public async insertEvent(chat_id: number, message_id: number, when: Date|null|undefined, description: string, author_name: string, author_id: string): Promise<void> {
     if (description.length > DESCRIPTION_MAX_LENGTH) {
       throw new Error(`Description too long. Maximum length: ${DESCRIPTION_MAX_LENGTH} characters.`);
     }
     if (when === undefined || when == null){
       //console.log('date undefined');
-      await run(this.connection, 'INSERT INTO events (chat_id, message_id, description) VALUES (?,?,?)', [chat_id, message_id, description]);
+      await run(this.connection, 'INSERT INTO events (chat_id, message_id, description, author_name, author_id) VALUES (?,?,?,?,?)', [chat_id, message_id, description, author_name, author_id]);
     } else {
       //console.log(`date ${when}`);
-      await run(this.connection, 'INSERT INTO events (chat_id, message_id, `when`, description) VALUES (?,?,?,?)', [chat_id, message_id, when, description]);
+      await run(this.connection, 'INSERT INTO events (chat_id, message_id, `when`, description, author_name, author_id) VALUES (?,?,?,?,?,?)', [chat_id, message_id, when, description, author_name, author_id]);
     } 
-}
+  }
+
+  public async updateDateOfEvent(event_id: number, when: Date): Promise<Event> {
+    await run(this.connection, 'UPDATE events SET `when`=? where id=?', [when, event_id]);
+    return this.getEventById(event_id);
+  }
 
   public async rsvpToEvent(event_id: number, user_id: number, name: string): Promise<void> {
     //console.log(`${event_id}, ${user_id}, ${name}`)
