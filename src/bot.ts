@@ -44,7 +44,7 @@ bot.on('callback_query', (query: CallbackQuery) => {
   }
 });
 
-bot.onText(/^\/(L|l)ist( .*|$)/, async (message: Message) => {
+bot.onText(/^\/(L|l)ist( .*|@.*|$)/, async (message: Message) => {
   try {
     if (message.from?.is_bot){
       console.error(`Bot message. Command: ${pretty(message)}`);

@@ -18,7 +18,7 @@ export async function createEvent(message: Message, i18n: any, db: DB, bot: Tele
   const event_description_with_author = addEventAuthor(event_description, message.from, i18n);
   const serial_event = createSerialEvent(message, false);
   deleteMessage(bot, message);
-  if (message.text.trim() == '/event') {
+  if (message.text.trim().match(/^\/(E|e)vent(@[a-zA-Z0-9_]*|)$/) != null) {
     return;
   }
   const options: SendMessageOptions = {

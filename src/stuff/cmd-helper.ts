@@ -3,7 +3,7 @@ import { Event } from '../models';
 const HTMLDecoderEncoder = require("html-encoder-decoder");
 
 function removeBotCommandWithoutID(text: string): string {
-return text.replace(/^\/((E|e)vent|(D|d)ate|(C|c)md|(D|d)elete|(U|u)pdate)( |\n)?/, '');
+return text.replace(/^\/((E|e)vent(@[a-zA-Z0-9_]*|)|(D|d)ate|(C|c)md|(D|d)elete|(U|u)pdate)( |\n)?/, '');
 }
 
 function removeBotCommandWithID(text: string): string {

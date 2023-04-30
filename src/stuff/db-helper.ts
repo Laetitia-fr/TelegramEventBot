@@ -1,49 +1,52 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-export function all<Result>(connection: any, query: string, params?: Param[]): Promise<Result[]> {
+export function all<Result>(pool: any, query: string, params?: Param[]): Promise<Result[]> {
   return new Promise((resolve, reject) => {
     if (params == undefined) {
       params = [];
     }
-    connection.connect(function(err: any) {
+    pool.getConnection((err: any, connection: any) => {
       if (err) reject('Error: ' + err.message);
       connection.query(query, params, function (err: any, result: any) {
         if (err) reject('Error: ' + err.message);
         resolve(<Result[]>result);
       });
+      connection.release();
     });
 
   });
 }
 
-export function get<Result>(connection: any, query: string, params?: Param[]): Promise<Result> {
+export function get<Result>(pool: any, query: string, params?: Param[]): Promise<Result> {
   return new Promise((resolve, reject) => {
     if (params == undefined) {
       params = [];
     }
     
-    connection.connect(function(err: any) {
+    pool.getConnection((err: any, connection: any) => {
       if (err) reject('Error: ' + err.message);
       connection.execute(query, params, function (err: any, result: any) {
         if (err) reject('Error: ' + err.message);
         resolve(<Result>result[0]);
       });
+      connection.release();
     });
   });
 }
 
-export function run(connection: any, query: string, params?: Param[]): Promise<unknown[]> {
+export function run(pool: any, query: string, params?: Param[]): Promise<unknown[]> {
   return new Promise((resolve, reject) => {
     if (params == undefined) {
       params = [];
     }
 
-    connection.connect(function(err: any) {
+    pool.getConnection((err: any, connection: any) => {
       if (err) reject('Error: ' + err.message);
       connection.execute(query, params, function (err: any, result: any) {
         if (err) reject('Error: ' + err.message);
         resolve(result);
       });
+      connection.release();
     });
   });
 }

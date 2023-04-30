@@ -37,7 +37,9 @@ export function getDateEvent(message: Message): Date|null|undefined {
 }
 
 export function addEventAuthor(text: string, author: User, i18n: any): string {
-  return `${text}\n\n<i>${i18n.message_content.created_by} ${getFullNameString(author)} (@${getUserName(author)})</i>`;
+  let user_name = getUserName(author);
+  user_name = user_name.length>0 ? ` (@${user_name})` : '';
+  return `${text}\n\n<i>${i18n.message_content.created_by} ${getFullNameString(author)}${user_name}</i>`;
 }
 
 export function getFullNameString(user: User): string {
@@ -55,7 +57,8 @@ export function getFullNameString(user: User): string {
 
 export function getUserName(user: User): string {
   if (user.username === undefined) {
-    throw new Error(`User doesn't have a username: ${user}`);
+    //throw new Error(`User doesn't have a username: ${user}`);
+    return '';
   }
   return user.username;
 }
@@ -66,7 +69,9 @@ export function createEventIDFromMessage(message: Message): string {
 
 export function getEventTextWithAttendees(description: string, when: Date|null, author_name: string, author_id: string, attendees: Attendee[], i18n: any): string {
   const event_date = displayDate(when);
-  return `${getEventDescription(description, event_date, i18n, false)}\n\n<i>${i18n.message_content.created_by} ${author_name} (@${author_id})</i>\n\n<b>${attendees.length} ${i18n.message_content.rsvps} :</b>${attendees.reduce(
+  let user_name = author_id;
+  user_name = user_name.length>0 ? ` (@${user_name})` : '';
+  return `${getEventDescription(description, event_date, i18n, false)}\n\n<i>${i18n.message_content.created_by} ${author_name}${user_name}</i>\n\n<b>${attendees.length} ${i18n.message_content.rsvps} :</b>${attendees.reduce(
     (attendeesString, attendeeRow) =>
       `${attendeesString}\n - ${attendeeRow.user_name} (@${attendeeRow.telegram_name})`,
     '',
