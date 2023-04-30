@@ -37,9 +37,12 @@ export function getDateEvent(message: Message): Date|null|undefined {
 }
 
 export function addEventAuthor(text: string, author: User, i18n: any): string {
-  let user_name = getUserName(author);
-  user_name = user_name.length>0 ? ` (@${user_name})` : '';
-  return `${text}\n\n<i>${i18n.message_content.created_by} ${getFullNameString(author)}${user_name}</i>`;
+  return `${text}\n\n<i>${i18n.message_content.created_by} ${mentionUser(getFullNameString(author), author.id)}</i>`;
+}
+
+function mentionUser(user_name: string, user_id: number|string): string {
+  const user_link = `<a href="tg://user?id=${user_id}">${user_name}</a>`; 
+  return user_link;
 }
 
 export function getFullNameString(user: User): string {
@@ -55,7 +58,15 @@ export function getFullNameString(user: User): string {
   return `${user.first_name} ${user.last_name}`;
 }
 
-export function getUserName(user: User): string {
+export function getUserId(user: User): number {
+  if (user.id === undefined) {
+    //throw new Error(`User doesn't have a username: ${user}`);
+    return null;
+  }
+  return user.id;
+}
+
+export function getTelegramUserName(user: User): string {
   if (user.username === undefined) {
     //throw new Error(`User doesn't have a username: ${user}`);
     return '';
@@ -71,9 +82,9 @@ export function getEventTextWithAttendees(description: string, when: Date|null, 
   const event_date = displayDate(when);
   let user_name = author_id;
   user_name = user_name.length>0 ? ` (@${user_name})` : '';
-  return `${getEventDescription(description, event_date, i18n, false)}\n\n<i>${i18n.message_content.created_by} ${author_name}${user_name}</i>\n\n<b>${attendees.length} ${i18n.message_content.rsvps} :</b>${attendees.reduce(
+  return `${getEventDescription(description, event_date, i18n, false)}\n\n<i>${i18n.message_content.created_by} ${mentionUser(author_name, author_id)}</i>\n\n<b>${attendees.length} ${i18n.message_content.rsvps} :</b>${attendees.reduce(
     (attendeesString, attendeeRow) =>
-      `${attendeesString}\n - ${attendeeRow.user_name} (@${attendeeRow.telegram_name})`,
+      `${attendeesString}\n - ${mentionUser(attendeeRow.user_name, attendeeRow.user_id)}`,
     '',
   )}`;
 }
@@ -91,7 +102,7 @@ export function createEventsListForAdmin(events: Event[], i18n: any): string {
 }
 
 export function displayEventForAdmin(event: Event, i18n: any): string {
-  return `${i18n.message_list_content.prefix} id=${event.id}\n(chat_id=${event.chat_id}), date=${displayDate(event.when)}, auteur=${event.author_name}(@${event.author_id})\n${event.description}` ;
+  return `${i18n.message_list_content.prefix} id=${event.id}\n(chat_id=${event.chat_id}), date=${displayDate(event.when)}, auteur=${mentionUser(event.author_name, event.author_id)}\n${event.description}` ;
 }
 
 export function cmdCreateEvent(event: Event): string {
@@ -125,7 +136,7 @@ function addList(text: string, events: Event[], i18n: any): string {
 function addTechnicalList(text: string, events: Event[], i18n: any): string {
   return `${text}\n\n${events.reduce(
     (eventsString, eventsRow) =>
-      `${eventsString}${i18n.message_list_content.prefix} (id=${eventsRow.id})\nchat_id=${eventsRow.chat_id}, date=${displayDate(eventsRow.when)}, auteur=${eventsRow.author_name}(@${eventsRow.author_id})\n${shortenDescriptionIfTooLong(eventsRow.description, 50, false)}\n${i18n.message_list_content.separator}\n`,
+      `${eventsString}${i18n.message_list_content.prefix} (id=${eventsRow.id})\nchat_id=${eventsRow.chat_id}, date=${displayDate(eventsRow.when)}, auteur=${mentionUser(eventsRow.author_name, eventsRow.author_id)})\n${shortenDescriptionIfTooLong(eventsRow.description, 50, false)}\n${i18n.message_list_content.separator}\n`,
     '',
   )}`;
 }

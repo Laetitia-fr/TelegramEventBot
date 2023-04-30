@@ -35,7 +35,7 @@ export class DB {
     return await get<Event>(this.pool, 'SELECT id, chat_id, message_id, `when`, description, author_name, author_id FROM events WHERE id=?', [id]);
   }
 
-  public async insertEvent(chat_id: number, message_id: number, when: Date|null|undefined, description: string, author_name: string, author_id: string): Promise<void> {
+  public async insertEvent(chat_id: number, message_id: number, when: Date|null|undefined, description: string, author_name: string, author_id: string|number): Promise<void> {
     if (description.length > DESCRIPTION_MAX_LENGTH) {
       throw new Error(`Description too long. Maximum length: ${DESCRIPTION_MAX_LENGTH} characters.`);
     }

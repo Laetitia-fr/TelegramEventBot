@@ -3,7 +3,7 @@
 import TelegramBot, { EditMessageTextOptions, Message, SendMessageOptions, PinChatMessageOptions, User } from 'node-telegram-bot-api';
 import { InlineKeyboard, InlineKeyboardButton, Row } from 'node-telegram-keyboard-wrapper';
 import { createEventDescription, addEventAuthor, getDateEvent, createSerialEvent, getEventTextWithAttendees
-  , getFullNameString, getUserName
+  , getFullNameString, getUserId, getTelegramUserName
   , createEventsList, createEventsListForAdmin, getEventId, displayEventForAdmin, cmdCreateEvent, cmdUpdateEvent
   , displayHelp, displayHelpAdmin } from './core';
 import { DB } from './db';
@@ -35,7 +35,7 @@ export async function createEvent(message: Message, i18n: any, db: DB, bot: Tele
   };
   bot.pinChatMessage(created_message.chat.id, created_message.message_id, pinOpts);
   const author_name = getFullNameString(message.from);
-  const author_id = getUserName(message.from);
+  const author_id = getUserId(message.from);
   await db.insertEvent(created_message.chat.id, created_message.message_id, event_date, serial_event, author_name, author_id);
 }
 
@@ -127,7 +127,7 @@ export async function changeRSVPForUser(
     //throw new Error(`Event could not be found in the database: chat_id=${chat_id}, message_id=${message_id}`);
   }
   if (!cancellingRSVP) {
-    await db.rsvpToEvent(event.id, user.id, getFullNameString(user), getUserName(user));
+    await db.rsvpToEvent(event.id, user.id, getFullNameString(user), getTelegramUserName(user));
   } else {
     await db.removeRsvpFromEvent(event.id, user.id);
   }

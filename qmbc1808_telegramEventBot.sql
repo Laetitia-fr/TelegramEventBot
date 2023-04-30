@@ -32,6 +32,8 @@ CREATE TABLE `attendees` (
   `id` int(11) NOT NULL,
   `event_id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
+  `user_name` VARCHAR(60) NOT NULL,
+  `telegram_name` VARCHAR(60) NOT NULL,
   `name` mediumtext NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -43,12 +45,12 @@ CREATE TABLE `attendees` (
 
 CREATE TABLE `events` (
   `id` int(11) NOT NULL,
-  `chat_id` int(11) NOT NULL,
+  `chat_id` VARCHAR(30) NOT NULL,
   `message_id` int(11) NOT NULL,
   `when` DATE NULL,
   `description` mediumtext NOT NULL,
-  `author_name` TEXT NOT NULL,
-  `author_id` TEXT NOT NULL,
+  `author_name` VARCHAR(60) NOT NULL,
+  `author_id` VARCHAR(60) NOT NULL,
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
