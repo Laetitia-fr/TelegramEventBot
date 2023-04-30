@@ -1,31 +1,41 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
-import TelegramBot, { EditMessageTextOptions, Message, SendMessageOptions, User } from 'node-telegram-bot-api';
+import TelegramBot, { EditMessageTextOptions, Message, SendMessageOptions, PinChatMessageOptions, User } from 'node-telegram-bot-api';
 import { InlineKeyboard, InlineKeyboardButton, Row } from 'node-telegram-keyboard-wrapper';
-import { createEventDescription, addEventAuthor, getDateEvent, createSerialEvent, getEventTextWithAttendees, getFullNameString, getAuthorId
-  , createEventsList, createEventsListForAdmin, getEventId, displayEventForAdmin, cmdCreateEvent, cmdUpdateEvent, displayHelp, displayHelpAdmin } from './core';
+import { createEventDescription, addEventAuthor, getDateEvent, createSerialEvent, getEventTextWithAttendees
+  , getFullNameString, getUserName
+  , createEventsList, createEventsListForAdmin, getEventId, displayEventForAdmin, cmdCreateEvent, cmdUpdateEvent
+  , displayHelp, displayHelpAdmin } from './core';
 import { DB } from './db';
-import { Action } from './models';
+import { Action, Event } from './models';
 
 export async function createEvent(message: Message, i18n: any, db: DB, bot: TelegramBot) {
-  const event_description = createEventDescription(message, i18n);
   if (message.text === undefined || message.from === undefined) {
     throw new Error(`Tried to create an event with an empty message-text. Message: ${message}`);
   }
-  const event_description_with_author = addEventAuthor(event_description, message.from, i18n);
   const event_date = getDateEvent(message);
+  const event_description = createEventDescription(message, i18n);
+  const event_description_with_author = addEventAuthor(event_description, message.from, i18n);
   const serial_event = createSerialEvent(message, false);
   deleteMessage(bot, message);
+  if (message.text.trim() == '/event') {
+    return;
+  }
   const options: SendMessageOptions = {
     parse_mode: 'HTML',
     reply_markup: rsvpButtons(i18n.buttons.rsvp, i18n.buttons.cancel_rsvp).getMarkup(),
+    disable_notification: true,
   };
   if (message.chat.is_forum) {
     options.message_thread_id=message.message_thread_id;
   }
   const created_message = await bot.sendMessage(message.chat.id, event_description_with_author, options);
+  const pinOpts: PinChatMessageOptions = {
+    disable_notification: true,
+  };
+  bot.pinChatMessage(created_message.chat.id, created_message.message_id, pinOpts);
   const author_name = getFullNameString(message.from);
-  const author_id = getAuthorId(message.from);
+  const author_id = getUserName(message.from);
   await db.insertEvent(created_message.chat.id, created_message.message_id, event_date, serial_event, author_name, author_id);
 }
 
@@ -54,15 +64,7 @@ export async function changeEvent(message: Message, i18n: any, db: DB, bot: Tele
     return;
   }
 
-  const attendees = await db.getAttendeesForEvent(event.chat_id, event.message_id);
-  const eventTextWithAttendees = getEventTextWithAttendees(event.description, event.author_name, attendees, i18n);
-  const options: EditMessageTextOptions = {
-    chat_id: event.chat_id,
-    message_id: event.message_id,
-    parse_mode: 'HTML',
-    reply_markup: rsvpButtons(i18n.buttons.rsvp, i18n.buttons.cancel_rsvp).getMarkup(),
-  };
-  bot.editMessageText(eventTextWithAttendees, options);
+  await refreshMessageEvent(event, i18n, db, bot);
 
   const event_detail = displayEventForAdmin(event, i18n);
   const optionsS: SendMessageOptions = {
@@ -71,6 +73,18 @@ export async function changeEvent(message: Message, i18n: any, db: DB, bot: Tele
   await bot.sendMessage(message.chat.id, event_detail, optionsS);
 }
 
+async function refreshMessageEvent(event: Event, i18n: any, db: DB, bot: TelegramBot) {
+  const attendees = await db.getAttendeesForEvent(event.chat_id, event.message_id);
+  const eventTextWithAttendees = getEventTextWithAttendees(event.description, event.when
+    , event.author_name, event.author_id, attendees, i18n);
+  const options: EditMessageTextOptions = {
+    chat_id: event.chat_id,
+    message_id: event.message_id,
+    parse_mode: 'HTML',
+    reply_markup: rsvpButtons(i18n.buttons.rsvp, i18n.buttons.cancel_rsvp).getMarkup(),
+  };
+  bot.editMessageText(eventTextWithAttendees, options);
+}
 
 function deleteMessage(bot: TelegramBot, message: Message): void {
   bot.deleteMessage(message.chat.id, message.message_id);
@@ -91,7 +105,7 @@ export async function changeRSVPForUser(
   if (query_data === undefined) {
     throw new Error(`Tried to change RSVP-status, but 'data' is undefined. Expected: 'RSVP' or 'CANCEL_RSVP'`);
   }
-  const rsvpedAlready = await db.didThisUserRsvpAlready(message.chat.id, message.message_id, user.id);
+  const rsvpedAlready = await db.didThisUserRsvpAlready(message.chat.id.toString(), message.message_id, user.id);
   const cancellingRSVP = (query_data === Action.CANCEL_RSVP);
   if (
     (cancellingRSVP && !rsvpedAlready) ||
@@ -113,21 +127,13 @@ export async function changeRSVPForUser(
     //throw new Error(`Event could not be found in the database: chat_id=${chat_id}, message_id=${message_id}`);
   }
   if (!cancellingRSVP) {
-    await db.rsvpToEvent(event.id, user.id, getFullNameString(user));
+    await db.rsvpToEvent(event.id, user.id, getFullNameString(user), getUserName(user));
   } else {
     await db.removeRsvpFromEvent(event.id, user.id);
   }
 
   bot.answerCallbackQuery(query_id, { text: '' }).then(async () => {
-    const attendees = await db.getAttendeesForEvent(chat_id, message_id);
-    const eventTextWithAttendees = getEventTextWithAttendees(event.description, event.author_name, attendees, i18n);
-    const options: EditMessageTextOptions = {
-      chat_id: message.chat.id,
-      message_id: message.message_id,
-      parse_mode: 'HTML',
-      reply_markup: rsvpButtons(i18n.buttons.rsvp, i18n.buttons.cancel_rsvp).getMarkup(),
-    };
-    bot.editMessageText(eventTextWithAttendees, options);
+    await refreshMessageEvent(event, i18n, db, bot);
   });
 }
 
@@ -166,6 +172,9 @@ export async function msgError(message: Message, response: string, i18n: any, db
   const options: SendMessageOptions = {
     parse_mode: 'HTML',
   };
+  if (message.chat.is_forum) {
+    options.message_thread_id=message.message_thread_id;
+  }
   await bot.sendMessage(message.chat.id, response, options);
 }
 
@@ -185,6 +194,9 @@ export async function dateEvent(message: Message, i18n: any, db: DB, bot: Telegr
     await msgError(message, i18n.errors.id_not_found, i18n, db, bot);
     return;
   }
+  
+  await refreshMessageEvent(event, i18n, db, bot);
+
   const event_detail = displayEventForAdmin(event, i18n);
   const options: SendMessageOptions = {
     parse_mode: 'HTML',

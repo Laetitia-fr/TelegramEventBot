@@ -3,6 +3,7 @@
 import { Message, User } from 'node-telegram-bot-api';
 import { Attendee } from './models';
 import { Event } from './models';
+import { getEventDescription, getSerialEvent, shortenDescriptionIfTooLong, getDateOnCmd, getEventIdOnCmd, getCmdCreateEvent, getCmdUpdateEvent } from './stuff/cmd-helper';
 /* eslint-disable */
 const HTMLDecoderEncoder = require("html-encoder-decoder");
 
@@ -10,85 +11,33 @@ export function createEventDescription(message: Message, i18n: any): string {
   if (message.text === undefined || message.from === undefined) {
     throw new Error(`Tried to create an event with an empty message-text. Message: ${message}`);
   }
-  const event_description = displayEvent( removeBotCommand(message.text), i18n );
-  const event_description_valid_length = shortenDescriptionIfTooLong(event_description, 3500, true);
-  return event_description_valid_length;
+  const event_date = displayDate(getDateEvent(message));
+  return getEventDescription(message.text, event_date, i18n, false);
 }
 
 export function createSerialEvent(message: Message, removeId: boolean): string {
   if (message.text === undefined || message.from === undefined) {
     throw new Error(`Tried to create an event with an empty message-text. Message: ${message}`);
   }
-  const event_description = removeId ? removeBotCommandWithID(message.text) : removeBotCommand(message.text);
-  const event_description_valid_length = shortenDescriptionIfTooLong(event_description, 3500, true);
-  return event_description_valid_length;
-}
-
-export function displayEvent(description: string, i18n: any): string {
-  const event_description = '<u>' + i18n.message_content.prefix + '</u>\n\n' + description;
-  return event_description;
-}
-
-function shortenDescriptionIfTooLong(description: string, size: number, pretty: boolean): string {
-  const descrip_without_balises = description.replace(/<[/]?[a-zA-Z]*>/g, '').replace(/\n/g, ' ');
-  if (descrip_without_balises.length > size) {
-    return descrip_without_balises.substring(0, size-1) + '...';
-  } else {
-    return pretty ? description : descrip_without_balises;
-  }
-}
-
-function removeBotCommand(text: string): string {
-  return text.replace(/^\/((E|e)vent|(D|d)ate|(C|c)md|(D|d)elete|(U|u)pdate)( |\n)?/, '');
-}
-
-function removeBotCommandWithID(text: string): string {
-  return text.replace(/^\/((D|d)ate|(C|c)md|(D|d)elete|(U|u)pdate) [0-9]*( |\n)?/, '');
-}
-
-export function getDateEvent(message: Message): Date|null|undefined {
-  if (message.text === undefined || message.from === undefined) {
-    throw new Error(`Tried to create an event with an empty message-text. Message: ${message}`);
-  }
-  const event_description = removeBotCommand(message.text);
-  const dates = event_description.matchAll(/(?<day>[0-9]{1,2})\/(?<month>[0-9]{1,2})\/(?<year>[0-9]{4})/g);
-  //console.log(dates);
-  let yearI, monthI, dayI : number;
-  let result: Date|null = null;
-  for(const currentDate of dates) {
-    if (currentDate.groups === undefined) {
-      throw new Error(`Tried to extrtact date on message. Message: ${event_description}`);
-    }
-    const {year, month, day} = currentDate.groups;
-    //console.log(`${year}-${month}-${day}`);
-    yearI = parseInt(year);
-    monthI = parseInt(month)-1;
-    dayI = parseInt(day);
-    if (yearI>=2023 && monthI>=0 && monthI<12 && dayI>0 && dayI<=31){
-      result = new Date();
-      result.setFullYear(yearI, monthI, dayI);
-      if (! (result instanceof Date && isFinite(result.getTime())) ){
-        result = null;
-      }
-    }
-  }
-  return result;
+  return getSerialEvent(message.text, removeId);
 }
 
 export function getEventId(message: Message): number {
   if (message.text === undefined || message.from === undefined) {
     throw new Error(`Tried to create an event with an empty message-text. Message: ${message}`);
   }
-  const msg = removeBotCommand(message.text);
-  const ids = msg.match(/(?<id>[0-9]*)/);
-  if (ids === undefined || ids?.groups == undefined){
-    return 0;
+  return getEventIdOnCmd(message.text);
+}
+
+export function getDateEvent(message: Message): Date|null|undefined {
+  if (message.text === undefined || message.from === undefined) {
+    throw new Error(`Tried to create an event with an empty message-text. Message: ${message}`);
   }
-  return parseInt(ids?.groups?.id);
+  return getDateOnCmd(message.text);
 }
 
 export function addEventAuthor(text: string, author: User, i18n: any): string {
-  return `${text}\n\n<i>${i18n.message_content.created_by} ${getFullNameString(author)}</i>`;
+  return `${text}\n\n<i>${i18n.message_content.created_by} ${getFullNameString(author)} (@${getUserName(author)})</i>`;
 }
 
 export function getFullNameString(user: User): string {
@@ -104,7 +53,7 @@ export function getFullNameString(user: User): string {
   return `${user.first_name} ${user.last_name}`;
 }
 
-export function getAuthorId(user: User): string {
+export function getUserName(user: User): string {
   if (user.username === undefined) {
     throw new Error(`User doesn't have a username: ${user}`);
   }
@@ -115,10 +64,11 @@ export function createEventIDFromMessage(message: Message): string {
   return `${message.chat.id}_${message.message_id}`;
 }
 
-export function getEventTextWithAttendees(description: string, author_name: string, attendees: Attendee[], i18n: any): string {
-  return `${displayEvent(description, i18n)}\n\n<i>${i18n.message_content.created_by} ${author_name}</i>\n\n<b>${attendees.length} ${i18n.message_content.rsvps} :</b>${attendees.reduce(
+export function getEventTextWithAttendees(description: string, when: Date|null, author_name: string, author_id: string, attendees: Attendee[], i18n: any): string {
+  const event_date = displayDate(when);
+  return `${getEventDescription(description, event_date, i18n, false)}\n\n<i>${i18n.message_content.created_by} ${author_name} (@${author_id})</i>\n\n<b>${attendees.length} ${i18n.message_content.rsvps} :</b>${attendees.reduce(
     (attendeesString, attendeeRow) =>
-      `${attendeesString}\n - ${attendeeRow.name}`,
+      `${attendeesString}\n - ${attendeeRow.user_name} (@${attendeeRow.telegram_name})`,
     '',
   )}`;
 }
@@ -140,11 +90,11 @@ export function displayEventForAdmin(event: Event, i18n: any): string {
 }
 
 export function cmdCreateEvent(event: Event): string {
-  return `/event ${HTMLDecoderEncoder.encode(event.description)}` ;
+  return getCmdCreateEvent(event);
 }
 
 export function cmdUpdateEvent(event: Event): string {
-  return `/update ${event.id} ${HTMLDecoderEncoder.encode(event.description)}` ;
+  return getCmdUpdateEvent(event);
 }
 
 export function displayHelp(i18n: any): string {
@@ -156,7 +106,7 @@ export function displayHelpAdmin(i18n: any): string {
 }
 
 function listHeader(i18n: any): string {
-  return `<u>${i18n.message_list_content.header}</u>`;
+  return `${i18n.message_list_content.header}`;
 }
 
 function addList(text: string, events: Event[], i18n: any): string {

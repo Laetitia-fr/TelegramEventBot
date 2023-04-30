@@ -14,7 +14,6 @@ console.log(`Bot server started. Version ${packageInfo.version}. Production mode
 
 bot.onText(/^\/(E|e)vent.*/, async (message: Message) => {
   try {
-    console.log(`Command: ${pretty(message)}`);
     if (message.from?.is_bot){
       console.error(`Bot message. Command: ${pretty(message)}`);
       return;
@@ -27,7 +26,6 @@ bot.onText(/^\/(E|e)vent.*/, async (message: Message) => {
 
 bot.onText(/^\/(U|u)pdate.*/, async (message: Message) => {
   try {
-    console.log(`Command: ${pretty(message)}`);
     if (message.from?.is_bot){
       console.error(`Bot message. Command: ${pretty(message)}`);
       return;

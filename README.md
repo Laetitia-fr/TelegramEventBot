@@ -56,19 +56,20 @@ USE telegramEventBot;
 
 CREATE TABLE events(
     `id` INT NOT NULL UNIQUE AUTO_INCREMENT,
-    `chat_id` INT NOT NULL,
+    `chat_id` VARCHAR(30) NOT NULL,
     `message_id` INT NOT NULL,
     `when` DATE NULL,
     `description` TEXT NOT NULL,
-    `author_name` TEXT NOT NULL,
-    `author_id` TEXT NOT NULL,
+    `author_name` VARCHAR(60) NOT NULL,
+    `author_id` VARCHAR(60) NOT NULL,
     PRIMARY KEY(`id`)
 );
 CREATE TABLE attendees(
     id INTEGER NOT NULL UNIQUE AUTO_INCREMENT,
     event_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
-    name TEXT NOT NULL,
+    user_name VARCHAR(60) NOT NULL,
+    telegram_name VARCHAR(60) NOT NULL,
     FOREIGN KEY(event_id) REFERENCES events(id),
     PRIMARY KEY(id)
 );

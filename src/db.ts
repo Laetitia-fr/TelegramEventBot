@@ -66,27 +66,26 @@ export class DB {
     await run(this.connection, 'DELETE FROM events where id=?', [event_id]);
   }
 
-  public async rsvpToEvent(event_id: number, user_id: number, name: string): Promise<void> {
-    //console.log(`${event_id}, ${user_id}, ${name}`)
-    await run(this.connection, 'INSERT INTO attendees (event_id, user_id, name) VALUES (?, ?, ?)', [event_id, user_id, name]);
+  public async rsvpToEvent(event_id: number, user_id: number, user_name: string, telegram_name: string): Promise<void> {
+    await run(this.connection, 'INSERT INTO attendees (event_id, user_id, user_name, telegram_name) VALUES (?, ?, ?, ?)', [event_id, user_id, user_name, telegram_name]);
   }
 
   public async removeRsvpFromEvent(event_id: number, user_id: number): Promise<void> {
     await run(this.connection, 'DELETE FROM attendees WHERE event_id=? AND user_id=?', [event_id, user_id]);
   }
 
-  public async didThisUserRsvpAlready(chat_id: number, message_id: number, user_id: number): Promise<boolean> {
+  public async didThisUserRsvpAlready(chat_id: string, message_id: number, user_id: number): Promise<boolean> {
     const attendances = await this.getAttendeesForEventAndUser(chat_id, message_id, user_id);
     return attendances.length > 0;
   }
 
-  private async getAttendeesForEventAndUser(chat_id: number, message_id: number, user_id: number): Promise<Attendee[]> {
+  private async getAttendeesForEventAndUser(chat_id: string, message_id: number, user_id: number): Promise<Attendee[]> {
     return await all<Attendee>(this.connection, 'SELECT attendees.* FROM attendees JOIN events ON attendees.event_id = events.id WHERE chat_id=? AND message_id=? AND user_id=?',
       [chat_id, message_id, user_id],
     );
   }
 
-  public async getAttendeesForEvent(chat_id: number, message_id: number): Promise<Attendee[]> {
+  public async getAttendeesForEvent(chat_id: string, message_id: number): Promise<Attendee[]> {
     return await all<Attendee>(this.connection, 'SELECT attendees.* FROM attendees JOIN events ON attendees.event_id = events.id WHERE chat_id=? AND message_id=?',
       [chat_id, message_id],
     );
