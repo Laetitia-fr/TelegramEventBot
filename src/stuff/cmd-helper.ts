@@ -34,7 +34,7 @@ export function getSerialEvent(message: string, removeId: boolean): string {
 }
 
 function displayEvent(description: string, when: string, i18n: any): string {
-  const event_description = `${i18n.message_content.prefix} ${when}\n\n${description}`;
+  const event_description = `${i18n.message_content.prefix} ${when}\n${description}`;
   return event_description;
 }
 

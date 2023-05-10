@@ -86,7 +86,7 @@ export function getEventTextWithAttendees(description: string, when: Date|null, 
     (attendeesString, attendeeRow) =>
       `${attendeesString}\n - ${mentionUser(attendeeRow.user_name, attendeeRow.user_id)}`,
     '',
-  )}`;
+  )}\n${i18n.message_content.post_scriptum}`;
 }
 
 export function createEventsList(events: Event[], i18n: any): string {
